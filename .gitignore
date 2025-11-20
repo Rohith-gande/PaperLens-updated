@@ -1,0 +1,332 @@
+# ============================================================
+# Environment Variables & Secrets (CRITICAL - DO NOT COMMIT)
+# ============================================================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+*.env
+
+# Firebase Service Account Keys (SENSITIVE)
+**/serviceAccountKey.json
+**/serviceAccountKey*.json
+**/*-firebase-adminsdk-*.json
+backend/serviceAccountKey.json
+backend_new/serviceAccountKey.json
+
+# API Keys & Credentials
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+secrets.json
+
+# ============================================================
+# Frontend (React/Vite)
+# ============================================================
+# Dependencies
+frontend/node_modules/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+frontend/dist/
+frontend/dist-ssr/
+frontend/build/
+frontend/.vite/
+frontend/.output/
+dist/
+build/
+*.local
+
+# Vite
+frontend/.vite/
+.vite/
+vite.config.js.timestamp-*
+
+# React
+frontend/.react/
+.react/
+
+# Testing
+frontend/coverage/
+coverage/
+.nyc_output/
+*.lcov
+
+# Storybook
+frontend/.storybook/
+.storybook/
+storybook-static/
+
+# ============================================================
+# Backend (Python/FastAPI)
+# ============================================================
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+backend/venv/
+backend_new/venv/
+backend/.venv/
+backend_new/.venv/
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.ENV/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# ============================================================
+# Vectorstores & Model Files (Large Files)
+# ============================================================
+# FAISS vectorstores
+backend/vectorstores/
+backend_new/vectorstores/
+vectorstores/
+**/vectorstores/
+*.faiss
+*.pkl
+*.pickle
+*.index
+*.bin
+
+# Sentence Transformer cache
+.cache/
+sentence_transformers/
+.huggingface/
+transformers_cache/
+
+# Model files
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.ckpt
+*.safetensors
+models/
+checkpoints/
+
+# ============================================================
+# Database Files
+# ============================================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+mongodb/
+mongo/
+
+# ============================================================
+# Logs & Temporary Files
+# ============================================================
+*.log
+*.log.*
+logs/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.swp
+*.swo
+*~
+
+# ============================================================
+# IDEs & Editors
+# ============================================================
+# VSCode
+.vscode/
+*.code-workspace
+.vscode-test/
+
+# PyCharm / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.\#*
+.directory
+
+# ============================================================
+# OS Files
+# ============================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+desktop.ini
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================
+# Project Specific
+# ============================================================
+# Uploaded/downloaded files
+uploads/
+downloads/
+temp/
+tmp/
+
+# Test outputs
+test_output/
+test_results/
+*.test.js.snap
+
+# Documentation builds
+docs/_build/
+site/
+docs/.doctrees/
+
+# Local configuration
+local_settings.py
+local_config.json
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# Archive files (if not needed)
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# ============================================================
+# Firebase
+# ============================================================
+.firebase/
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/
+
+# ============================================================
+# Misc
+# ============================================================
+# Lock files (optional - some teams commit these)
+# package-lock.json
+# yarn.lock
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+

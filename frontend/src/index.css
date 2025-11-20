@@ -1,0 +1,22 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&display=swap');
+
+/* Import Base Styles */
+@import './styles/variables.css';
+@import './styles/reset.css';
+@import './styles/base.css';
+
+/* Import Component Styles */
+@import './styles/components/button.css';
+@import './styles/components/input.css';
+@import './styles/components/card.css';
+@import './styles/components/modal.css';
+@import './styles/components/header.css';
+@import './styles/components/sidebar.css';
+@import './styles/components/loading.css';
+@import './styles/components/utility.css';
+
+/* Import Page Styles */
+@import './styles/pages/landing.css';
+@import './styles/pages/auth.css';
+@import './styles/pages/dashboard.css';
