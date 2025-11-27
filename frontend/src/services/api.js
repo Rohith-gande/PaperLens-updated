@@ -2,6 +2,29 @@ const API_URL = (typeof import.meta !== 'undefined' && import.meta.env && import
   ? import.meta.env.VITE_BACKEND_URL
   : (typeof window !== 'undefined' ? (window.__BACKEND_URL__ || 'http://localhost:8000') : 'http://localhost:8000');
 
+const serializeFilters = (filters = {}) => {
+  const entries = Object.entries(filters || {}).filter(
+    ([, value]) => value !== undefined && value !== null
+  );
+
+  if (!entries.length) {
+    return '';
+  }
+
+  const normalized = {};
+  entries
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        normalized[key] = [...value].sort();
+      } else {
+        normalized[key] = value;
+      }
+    });
+
+  return JSON.stringify(normalized);
+};
+
 // Helper to get cached data
 const getCachedData = (key) => {
   try {
@@ -33,14 +56,15 @@ const setCachedData = (key, data) => {
 
 // ==================== CORE API METHODS ====================
 
-export const searchPapers = async ({ query, page = 1, pageSize = 5 }, token) => {
+export const searchPapers = async ({ query, page = 1, pageSize = 5, filters = {} }, token) => {
   if (!query || !query.trim()) {
     throw new Error('Query is required');
   }
 
   // Check cache first
   const normalizedQuery = query.toLowerCase().trim();
-  const cacheKey = `search_${normalizedQuery}_${page}_${pageSize}`;
+  const filterSignature = serializeFilters(filters);
+  const cacheKey = `search_${normalizedQuery}_${page}_${pageSize}_${filterSignature}`;
   const cached = getCachedData(cacheKey);
   
   if (cached) {
@@ -55,7 +79,12 @@ export const searchPapers = async ({ query, page = 1, pageSize = 5 }, token) => 
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ query, page, page_size: pageSize })
+    body: JSON.stringify({
+      query,
+      page,
+      page_size: pageSize,
+      ...filters
+    })
   });
   
   if (!response.ok) {

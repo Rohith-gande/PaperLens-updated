@@ -59,6 +59,132 @@
   gap: var(--spacing-lg);
 }
 
+/* Filters */
+.dashboard-filters-panel {
+  background: var(--color-white);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-2xl);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+}
+
+.filters-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.filter-chip {
+  position: relative;
+}
+
+.filter-chip-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--color-gray-50);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.filter-chip-button:hover {
+  border-color: var(--color-primary);
+}
+
+.filter-chip-button.active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: transparent;
+}
+
+.filter-chip-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.filter-chip-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  background: var(--color-white);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem;
+  min-width: 15rem;
+  z-index: 20;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+.filter-chip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.filter-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filter-field-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.filter-chip-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.filter-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.filter-option-count {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.filter-section-heading {
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.filter-clear-link {
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
 /* Loading State */
 .dashboard-loading {
   display: flex;

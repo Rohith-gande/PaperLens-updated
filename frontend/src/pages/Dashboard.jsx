@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { AuthContext } from '../App';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -10,6 +10,55 @@ import ChatModal from '../components/ChatModal';
 import HistorySidebar from '../components/HistorySidebar';
 
 const PAGE_SIZE = 5;
+const createDefaultFilters = () => ({
+  openAccess: false,
+  yearMin: '',
+  yearMax: '',
+  minCitations: '',
+  venues: [],
+  publicationTypes: []
+});
+
+const FilterChip = ({ label, isOpen, onToggle, children, countLabel }) => (
+  <div className="filter-chip">
+    <button
+      type="button"
+      className={`filter-chip-button ${isOpen ? 'active' : ''}`}
+      onClick={onToggle}
+    >
+      <span>{label}</span>
+      {countLabel && <span className="filter-chip-count">{countLabel}</span>}
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ marginLeft: '0.35rem' }}
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </button>
+    {isOpen && (
+      <div className="filter-chip-dropdown">
+        {children}
+      </div>
+    )}
+  </div>
+);
+
+const FilterToggleButton = ({ label, active, onClick }) => (
+  <button
+    type="button"
+    className={`filter-chip-button ${active ? 'active' : ''}`}
+    onClick={onClick}
+  >
+    {label}
+  </button>
+);
 
 export default function Dashboard() {
   const { user, token } = useContext(AuthContext);
@@ -34,6 +83,23 @@ export default function Dashboard() {
   const [darkMode, setDarkMode] = useState(false);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState(null);
+  const [filtersState, setFiltersState] = useState(createDefaultFilters);
+  const [availableFilters, setAvailableFilters] = useState({
+    venues: [],
+    publication_types: [],
+    year_min: null,
+    year_max: null
+  });
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  const loadUserPapers = useCallback(async () => {
+    try {
+      const response = await getUserPapers(token);
+      setUserPapers(response.papers || []);
+    } catch (err) {
+      console.error('Failed to load user papers:', err);
+    }
+  }, [token]);
 
   useEffect(() => {
     loadUserPapers();
@@ -43,26 +109,61 @@ export default function Dashboard() {
     if (savedDarkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
     }
-  }, [token]);
+  }, [token, loadUserPapers]);
 
-  const loadUserPapers = async () => {
-    try {
-      const response = await getUserPapers(token);
-      setUserPapers(response.papers || []);
-    } catch (err) {
-      console.error('Failed to load user papers:', err);
+  const buildFilterPayload = (state) => {
+    const payload = {};
+
+    if (state.openAccess) {
+      payload.open_access = true;
     }
+
+    const yearMin = parseInt(state.yearMin, 10);
+    if (!Number.isNaN(yearMin)) {
+      payload.year_min = yearMin;
+    }
+
+    const yearMax = parseInt(state.yearMax, 10);
+    if (!Number.isNaN(yearMax)) {
+      payload.year_max = yearMax;
+    }
+
+    const minCitations = parseInt(state.minCitations, 10);
+    if (!Number.isNaN(minCitations)) {
+      payload.min_citations = minCitations;
+    }
+
+    if (state.venues && state.venues.length > 0) {
+      payload.venues = state.venues;
+    }
+
+    if (state.publicationTypes && state.publicationTypes.length > 0) {
+      payload.publication_types = state.publicationTypes;
+    }
+
+    return payload;
   };
 
-  const fetchPapers = async (searchQuery, targetPage = 1) => {
+  const fetchPapers = async (searchQuery, targetPage = 1, stateFilters = filtersState) => {
     setLoading(true);
     setError('');
     
     try {
-      const response = await searchPapers({ query: searchQuery, page: targetPage, pageSize: PAGE_SIZE }, token);
+      const response = await searchPapers({
+        query: searchQuery,
+        page: targetPage,
+        pageSize: PAGE_SIZE,
+        filters: buildFilterPayload(stateFilters)
+      }, token);
       setPapers(response.results || []);
       setMeta(response.meta || null);
       setPage(targetPage);
+      setAvailableFilters({
+        venues: response.filters?.venues || [],
+        publication_types: response.filters?.publication_types || [],
+        year_min: response.filters?.year_min ?? null,
+        year_max: response.filters?.year_max ?? null
+      });
     } catch (err) {
       setError('Failed to search papers. Please try again.');
       console.error(err);
@@ -77,13 +178,103 @@ export default function Dashboard() {
     
     setQuery(normalizedQuery);
     setPapers([]);
-    await fetchPapers(normalizedQuery, 1);
+    await fetchPapers(normalizedQuery, 1, filtersState);
   };
 
   const handlePageChange = async (direction) => {
     if (!query) return;
     const nextPage = direction === 'next' ? page + 1 : page - 1;
-    await fetchPapers(query, nextPage);
+    await fetchPapers(query, nextPage, filtersState);
+  };
+
+  const handleToggleFilter = (key, { autoApply = false } = {}) => {
+    setFiltersState((prev) => {
+      const next = {
+        ...prev,
+        [key]: !prev[key]
+      };
+      if (autoApply && query) {
+        fetchPapers(query, 1, next);
+      }
+      return next;
+    });
+  };
+
+  const handleInputFilterChange = (key, value) => {
+    setFiltersState((prev) => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleMultiSelectChange = (key, option) => {
+    setFiltersState((prev) => {
+      const current = new Set(prev[key] || []);
+      if (current.has(option)) {
+        current.delete(option);
+      } else {
+        current.add(option);
+      }
+      const next = {
+        ...prev,
+        [key]: Array.from(current)
+      };
+      return next;
+    });
+  };
+
+  const handleApplyFilters = async () => {
+    if (!query) return;
+    await fetchPapers(query, 1, filtersState);
+    setActiveFilter(null);
+  };
+
+  const handleClearFilters = async () => {
+    const resetFilters = createDefaultFilters();
+    setFiltersState(resetFilters);
+    if (query) {
+      await fetchPapers(query, 1, resetFilters);
+    }
+    setActiveFilter(null);
+  };
+
+  const filtersActive = Boolean(
+    filtersState.openAccess ||
+    filtersState.yearMin ||
+    filtersState.yearMax ||
+    filtersState.minCitations ||
+    (filtersState.venues && filtersState.venues.length) ||
+    (filtersState.publicationTypes && filtersState.publicationTypes.length)
+  );
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (!event.target.closest('.filter-chip')) {
+        setActiveFilter(null);
+      }
+    };
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, []);
+
+  const resetDateRange = () => {
+    setFiltersState((prev) => ({ ...prev, yearMin: '', yearMax: '' }));
+  };
+
+  const resetCitations = () => {
+    setFiltersState((prev) => ({ ...prev, minCitations: '' }));
+  };
+
+  const resetVenues = () => {
+    setFiltersState((prev) => ({ ...prev, venues: [] }));
+  };
+
+  const resetPublicationTypes = () => {
+    setFiltersState((prev) => ({ ...prev, publicationTypes: [] }));
+  };
+
+  const chatbotMessage = async () => {
+    throw new Error('Chatbot endpoint not configured');
   };
 
   const handleAskQuestion = async (paper) => {
@@ -184,6 +375,7 @@ export default function Dashboard() {
       const res = await chatbotMessage(msg, token);
       setBotMessages((prev) => [...prev, { role: 'assistant', content: res.reply }]);
     } catch (err) {
+      console.error('Chatbot error', err);
       setBotMessages((prev) => [...prev, { role: 'system', content: 'Chatbot error. Please try again.' }]);
     } finally {
       setBotLoading(false);
@@ -265,6 +457,147 @@ export default function Dashboard() {
                 onSearch={handleSearch}
                 loading={loading}
               />
+            </div>
+
+            {/* Filter Controls */}
+            <div className="dashboard-filters-panel">
+              <div className="filters-chip-row">
+                <FilterChip
+                  label="Date Range"
+                  isOpen={activeFilter === 'date'}
+                  onToggle={() => setActiveFilter(activeFilter === 'date' ? null : 'date')}
+                >
+                  <div className="filter-chip-content">
+                    <div className="filter-field-group">
+                      <label>From year</label>
+                      <input
+                        type="number"
+                        className="input"
+                        placeholder={availableFilters.year_min || 'Year (min)'}
+                        value={filtersState.yearMin}
+                        onChange={(e) => handleInputFilterChange('yearMin', e.target.value)}
+                      />
+                    </div>
+                    <div className="filter-field-group">
+                      <label>To year</label>
+                      <input
+                        type="number"
+                        className="input"
+                        placeholder={availableFilters.year_max || 'Year (max)'}
+                        value={filtersState.yearMax}
+                        onChange={(e) => handleInputFilterChange('yearMax', e.target.value)}
+                      />
+                    </div>
+                    <div className="filter-chip-buttons">
+                      <button className="btn btn-primary btn-sm" type="button" onClick={handleApplyFilters} disabled={!query}>
+                        Apply
+                      </button>
+                      <button className="btn btn-ghost btn-sm" type="button" onClick={resetDateRange}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </FilterChip>
+
+                {/* <FilterChip
+                  label="Citations"
+                  isOpen={activeFilter === 'citations'}
+                  onToggle={() => setActiveFilter(activeFilter === 'citations' ? null : 'citations')}
+                >
+                  <div className="filter-chip-content">
+                    <label>Minimum citations</label>
+                    <input
+                      type="number"
+                      className="input"
+                      placeholder="e.g. 50"
+                      value={filtersState.minCitations}
+                      onChange={(e) => handleInputFilterChange('minCitations', e.target.value)}
+                    />
+                    <div className="filter-chip-buttons">
+                      <button className="btn btn-primary btn-sm" type="button" onClick={handleApplyFilters} disabled={!query}>
+                        Apply
+                      </button>
+                      <button className="btn btn-ghost btn-sm" type="button" onClick={resetCitations}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </FilterChip> */}
+
+                <FilterToggleButton
+                  label="Has PDF"
+                  active={filtersState.openAccess}
+                  onClick={() => handleToggleFilter('openAccess', { autoApply: true })}
+                />
+
+                <FilterChip
+                  label="Publication Types"
+                  isOpen={activeFilter === 'pub_types'}
+                  onToggle={() => setActiveFilter(activeFilter === 'pub_types' ? null : 'pub_types')}
+                  countLabel={filtersState.publicationTypes.length ? filtersState.publicationTypes.length : undefined}
+                >
+                  <div className="filter-chip-content">
+                    <p className="filter-section-heading">Publication types</p>
+                    <div className="filter-options-list">
+                      {(availableFilters.publication_types || []).map((pubType) => (
+                        <label key={pubType.name} className="filter-option">
+                          <input
+                            type="checkbox"
+                            checked={filtersState.publicationTypes.includes(pubType.name)}
+                            onChange={() => handleMultiSelectChange('publicationTypes', pubType.name)}
+                          />
+                          <span>{pubType.name}</span>
+                          <span className="filter-option-count">{pubType.count}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="filter-chip-buttons">
+                      <button className="btn btn-primary btn-sm" type="button" onClick={handleApplyFilters} disabled={!query}>
+                        Apply
+                      </button>
+                      <button className="btn btn-ghost btn-sm" type="button" onClick={resetPublicationTypes}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </FilterChip>
+
+                <FilterChip
+                  label="Journals & Conferences"
+                  isOpen={activeFilter === 'venues'}
+                  onToggle={() => setActiveFilter(activeFilter === 'venues' ? null : 'venues')}
+                  countLabel={filtersState.venues.length ? filtersState.venues.length : undefined}
+                >
+                  <div className="filter-chip-content">
+                    <p className="filter-section-heading">Top Journals & Conferences</p>
+                    <div className="filter-options-list">
+                      {(availableFilters.venues || []).slice(0, 20).map((venue) => (
+                        <label key={venue.name} className="filter-option">
+                          <input
+                            type="checkbox"
+                            checked={filtersState.venues.includes(venue.name)}
+                            onChange={() => handleMultiSelectChange('venues', venue.name)}
+                          />
+                          <span>{venue.name}</span>
+                          <span className="filter-option-count">{venue.count}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="filter-chip-buttons">
+                      <button className="btn btn-primary btn-sm" type="button" onClick={handleApplyFilters} disabled={!query}>
+                        Apply
+                      </button>
+                      <button className="btn btn-ghost btn-sm" type="button" onClick={resetVenues}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </FilterChip>
+
+                <button className="filter-clear-link" type="button" onClick={handleClearFilters} disabled={!filtersActive}>
+                  Clear
+                </button>
+              </div>
             </div>
 
             {/* Error Message */}

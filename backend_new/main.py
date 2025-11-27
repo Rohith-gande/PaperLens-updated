@@ -5,8 +5,9 @@ Using Sentence Transformers for embeddings (no API key needed)
 """
 import os
 import math
+from collections import Counter
 from datetime import datetime, timezone
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -98,6 +99,69 @@ async def search_papers(request: SearchRequest, decoded=Depends(verify_token)):
         # Rank papers by relevance using Sentence Transformers
         ranked_papers = rank_papers(query, papers, top_k=20)
 
+        # Build available filter metadata with counts
+        venue_counter = Counter()
+        publication_counter = Counter()
+        year_values = []
+
+        for paper in ranked_papers:
+            venue = paper.get("venue")
+            if venue:
+                venue_counter[venue] += 1
+
+            pub_types = paper.get("publication_types") or []
+            for pub_type in pub_types:
+                if pub_type:
+                    publication_counter[pub_type] += 1
+
+            year = paper.get("year")
+            if year:
+                year_values.append(year)
+
+        available_filters = {
+            "venues": [
+                {"name": name, "count": count}
+                for name, count in venue_counter.most_common()
+            ],
+            "publication_types": [
+                {"name": name, "count": count}
+                for name, count in publication_counter.most_common()
+            ],
+            "year_min": min(year_values) if year_values else None,
+            "year_max": max(year_values) if year_values else None
+        }
+
+        # Apply user-selected filters
+        venues_filter = {v.lower() for v in (request.venues or [])}
+        pub_types_filter = {t.lower() for t in (request.publication_types or [])}
+
+        def paper_matches(paper: Dict) -> bool:
+            if request.open_access is not None and paper.get("open_access") != request.open_access:
+                return False
+
+            paper_year = paper.get("year")
+            if request.year_min is not None and (not paper_year or paper_year < request.year_min):
+                return False
+            if request.year_max is not None and (not paper_year or paper_year > request.year_max):
+                return False
+
+            if request.min_citations is not None and paper.get("citation_count", 0) < request.min_citations:
+                return False
+
+            if venues_filter:
+                paper_venue = (paper.get("venue") or "").lower()
+                if paper_venue not in venues_filter:
+                    return False
+
+            if pub_types_filter:
+                paper_pub_types = {t.lower() for t in (paper.get("publication_types") or [])}
+                if not paper_pub_types.intersection(pub_types_filter):
+                    return False
+
+            return True
+
+        filtered_papers = [paper for paper in ranked_papers if paper_matches(paper)]
+
         # Handle pagination (default 5 per page)
         try:
             page = max(1, int(request.page))
@@ -109,20 +173,20 @@ async def search_papers(request: SearchRequest, decoded=Depends(verify_token)):
         except (TypeError, ValueError):
             page_size = 5
 
-        total = len(ranked_papers)
+        total = len(filtered_papers)
         total_pages = math.ceil(total / page_size) if total else 1
         page = min(page, total_pages) if total else 1
 
         start_index = (page - 1) * page_size
         end_index = start_index + page_size
-        paged_results = ranked_papers[start_index:end_index]
+        paged_results = filtered_papers[start_index:end_index]
 
         # Save search to user history
         user_id = decoded['uid']
         await db.searches.insert_one({
             "user_id": user_id,
             "query": query,
-            "results": ranked_papers,
+            "results": filtered_papers,
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
@@ -133,9 +197,18 @@ async def search_papers(request: SearchRequest, decoded=Depends(verify_token)):
                 "page": page,
                 "page_size": page_size,
                 "total_pages": total_pages,
-                "has_next": page < total_pages,
-                "has_prev": page > 1
-            }
+                "has_next": page < total_pages if total else False,
+                "has_prev": page > 1 if total else False,
+                "applied_filters": {
+                    "open_access": request.open_access,
+                    "year_min": request.year_min,
+                    "year_max": request.year_max,
+                    "min_citations": request.min_citations,
+                    "venues": request.venues or [],
+                    "publication_types": request.publication_types or []
+                }
+            },
+            "filters": available_filters
         }
 
     except Exception as e:
