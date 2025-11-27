@@ -64,7 +64,7 @@ export default function ChatModal({ paper, token, onClose }) {
 
       setMessages([{
         role: 'assistant',
-        content: `${sourceMsg}\n\nI'm ready to answer questions about: "${paper.title}"\n\nWhat would you like to know?`,
+        content: `I'm ready to answer questions about: "${paper.title}"\n\nWhat would you like to know?`,
         sourceType: result.source_type
       }]);
     } catch (err) {
@@ -232,14 +232,7 @@ export default function ChatModal({ paper, token, onClose }) {
                       ⚠️ {message.disclaimer}
                     </div>
                   )}
-                  {message.sourceType && (
-                    <div className="source-badge">
-                      {message.sourceType === 'semantic_scholar_pdf' && '📄 Semantic Scholar PDF'}
-                      {message.sourceType === 'arxiv_pdf' && '📄 arXiv PDF'}
-                      {message.sourceType === 'metadata' && '📋 Metadata Only'}
-                      {message.sourceType === 'gemini_reasoning' && '🤖 General Knowledge'}
-                    </div>
-                  )}
+                 
                 </div>
               </div>
             ))}
