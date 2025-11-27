@@ -13,7 +13,7 @@ export default function ResearchQuery() {
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const data = await searchPapers(query, token);
+      const data = await searchPapers({ query, page: 1, pageSize: 5 }, token);
       setResults(data.results);
     } catch (error) {
       console.error("Error fetching papers:", error);

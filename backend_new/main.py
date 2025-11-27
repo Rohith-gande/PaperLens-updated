@@ -4,6 +4,7 @@ Core features: Search, Fetch, Ask Question, Compare Papers
 Using Sentence Transformers for embeddings (no API key needed)
 """
 import os
+import math
 from datetime import datetime, timezone
 from typing import Optional, Dict
 
@@ -95,7 +96,26 @@ async def search_papers(request: SearchRequest, decoded=Depends(verify_token)):
         papers = await SemanticScholarService.search_papers(query, limit=20)
 
         # Rank papers by relevance using Sentence Transformers
-        ranked_papers = rank_papers(query, papers, top_k=10)
+        ranked_papers = rank_papers(query, papers, top_k=20)
+
+        # Handle pagination (default 5 per page)
+        try:
+            page = max(1, int(request.page))
+        except (TypeError, ValueError):
+            page = 1
+
+        try:
+            page_size = max(1, min(5, int(request.page_size)))
+        except (TypeError, ValueError):
+            page_size = 5
+
+        total = len(ranked_papers)
+        total_pages = math.ceil(total / page_size) if total else 1
+        page = min(page, total_pages) if total else 1
+
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+        paged_results = ranked_papers[start_index:end_index]
 
         # Save search to user history
         user_id = decoded['uid']
@@ -106,7 +126,17 @@ async def search_papers(request: SearchRequest, decoded=Depends(verify_token)):
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
-        return {"results": ranked_papers}
+        return {
+            "results": paged_results,
+            "meta": {
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+        }
 
     except Exception as e:
         print(f"[ERROR] Search failed: {e}")

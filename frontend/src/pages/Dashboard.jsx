@@ -9,6 +9,8 @@ import PaperCard from '../components/PaperCard';
 import ChatModal from '../components/ChatModal';
 import HistorySidebar from '../components/HistorySidebar';
 
+const PAGE_SIZE = 5;
+
 export default function Dashboard() {
   const { user, token } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -30,6 +32,8 @@ export default function Dashboard() {
   const [userPapers, setUserPapers] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState(null);
 
   useEffect(() => {
     loadUserPapers();
@@ -50,22 +54,36 @@ export default function Dashboard() {
     }
   };
 
-  const handleSearch = async (searchQuery) => {
-    if (!searchQuery.trim()) return;
-    
+  const fetchPapers = async (searchQuery, targetPage = 1) => {
     setLoading(true);
     setError('');
-    setPapers([]);
     
     try {
-      const response = await searchPapers(searchQuery, token);
+      const response = await searchPapers({ query: searchQuery, page: targetPage, pageSize: PAGE_SIZE }, token);
       setPapers(response.results || []);
+      setMeta(response.meta || null);
+      setPage(targetPage);
     } catch (err) {
       setError('Failed to search papers. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (searchQuery) => {
+    const normalizedQuery = searchQuery?.trim() || query.trim();
+    if (!normalizedQuery) return;
+    
+    setQuery(normalizedQuery);
+    setPapers([]);
+    await fetchPapers(normalizedQuery, 1);
+  };
+
+  const handlePageChange = async (direction) => {
+    if (!query) return;
+    const nextPage = direction === 'next' ? page + 1 : page - 1;
+    await fetchPapers(query, nextPage);
   };
 
   const handleAskQuestion = async (paper) => {
@@ -270,7 +288,9 @@ export default function Dashboard() {
             {!loading && papers.length > 0 && (
               <div className="dashboard-results">
                 <h2 className="dashboard-results-header">
-                  Found {papers.length} papers
+                  {meta
+                    ? `Showing ${Math.min((meta.page - 1) * meta.page_size + 1, meta.total)}-${Math.min(meta.page * meta.page_size, meta.total)} of ${meta.total} papers`
+                    : `Found ${papers.length} papers`}
                 </h2>
                 <div className="dashboard-results-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <button
@@ -298,6 +318,25 @@ export default function Dashboard() {
                       />
                     );
                   })}
+                </div>
+                <div className="dashboard-pagination" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
+                  <button
+                    className="btn btn-outline"
+                    disabled={!meta?.has_prev}
+                    onClick={() => handlePageChange('prev')}
+                  >
+                    Previous
+                  </button>
+                  <span style={{ color: 'var(--muted-foreground)' }}>
+                    Page {meta?.page || 1} of {meta?.total_pages || 1}
+                  </span>
+                  <button
+                    className="btn btn-outline"
+                    disabled={!meta?.has_next}
+                    onClick={() => handlePageChange('next')}
+                  >
+                    Next
+                  </button>
                 </div>
               </div>
             )}

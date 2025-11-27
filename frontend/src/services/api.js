@@ -33,14 +33,19 @@ const setCachedData = (key, data) => {
 
 // ==================== CORE API METHODS ====================
 
-export const searchPapers = async (query, token) => {
+export const searchPapers = async ({ query, page = 1, pageSize = 5 }, token) => {
+  if (!query || !query.trim()) {
+    throw new Error('Query is required');
+  }
+
   // Check cache first
-  const cacheKey = `search_${query.toLowerCase().trim()}`;
+  const normalizedQuery = query.toLowerCase().trim();
+  const cacheKey = `search_${normalizedQuery}_${page}_${pageSize}`;
   const cached = getCachedData(cacheKey);
   
   if (cached) {
     console.log('Using cached results for:', query);
-    return { results: cached };
+    return cached;
   }
   
   // Fetch from API
@@ -50,7 +55,7 @@ export const searchPapers = async (query, token) => {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ query })
+    body: JSON.stringify({ query, page, page_size: pageSize })
   });
   
   if (!response.ok) {
@@ -60,7 +65,7 @@ export const searchPapers = async (query, token) => {
   const data = await response.json();
   
   // Cache the results
-  setCachedData(cacheKey, data.results);
+  setCachedData(cacheKey, data);
   
   return data;
 };
